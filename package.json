@@ -1,0 +1,11 @@
+{
+  "scripts": {
+    "test-version": "node scripts/test-untp-version.js"
+  },
+  "dependencies": {
+    "chalk": "^4.1.2",
+    "jsonld": "^8.3.3",
+    "jsonld-cli": "^2.0.0",
+    "ora": "^5.4.1"
+  }
+}
