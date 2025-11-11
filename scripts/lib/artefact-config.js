@@ -14,6 +14,10 @@ const UNTP_ARTEFACT_CONFIGS = {
           "jsonldContexts/DigitalProductPassport.jsonld?class=DigitalProductPassport",
         filename: "dpp.context.jsonld",
       },
+      vocabulary: {
+        urlPath: "jsonld/render.jsonld",
+        filename: "dpp.vocabulary.jsonld",
+      },
       schema: {
         urlPath:
           "jsonSchemas/DigitalProductPassport.json?class=DigitalProductPassport",
@@ -39,6 +43,10 @@ const UNTP_ARTEFACT_CONFIGS = {
         urlPath:
           "jsonldContexts/ConformityCredential.jsonld?class=ConformityCredential",
         filename: "dcc.context.jsonld",
+      },
+      vocabulary: {
+        urlPath: "jsonld/render.jsonld",
+        filename: "dcc.vocabulary.jsonld",
       },
       schema: {
         urlPath:
@@ -66,6 +74,10 @@ const UNTP_ARTEFACT_CONFIGS = {
           "jsonldContexts/DigitalFacilityRecord.jsonld?class=DigitalFacilityRecord",
         filename: "dfr.context.jsonld",
       },
+      vocabulary: {
+        urlPath: "jsonld/render.jsonld",
+        filename: "dfr.vocabulary.jsonld",
+      },
       schema: {
         urlPath:
           "jsonSchemas/DigitalFacilityRecord.json?class=DigitalFacilityRecord",
@@ -91,6 +103,10 @@ const UNTP_ARTEFACT_CONFIGS = {
         urlPath:
           "jsonldContexts/DigitalIdentityAnchor.jsonld?class=DigitalIdentityAnchor",
         filename: "dia.context.jsonld",
+      },
+      vocabulary: {
+        urlPath: "jsonld/render.jsonld",
+        filename: "dia.vocabulary.jsonld",
       },
       schema: {
         urlPath:
@@ -118,6 +134,10 @@ const UNTP_ARTEFACT_CONFIGS = {
           "jsonldContexts/traceabilityEvents.jsonld?class=traceabilityEvents",
         filename: "dte.context.jsonld",
       },
+      vocabulary: {
+        urlPath: "jsonld/render.jsonld",
+        filename: "dte.vocabulary.jsonld",
+      },
       schema: {
         urlPath:
           "jsonSchemas/DigitalTraceabilityEvent.json?class=DigitalTraceabilityEvent",
@@ -143,7 +163,11 @@ const UNTP_ARTEFACT_CONFIGS = {
         urlPath: "jsonldContexts/untp-core.jsonld?class=untp-core",
         filename: "core.context.jsonld",
       },
-      // Note: core only has context, no schema or sample
+      vocabulary: {
+        urlPath: "jsonld/render.jsonld",
+        filename: "core.vocabulary.jsonld",
+      },
+      // Note: core only has context and vocabulary, no schema or sample
     },
     contextPattern: (version) =>
       `https://test.uncefact.org/vocabulary/untp/core/${version}/`,
@@ -195,6 +219,15 @@ function generateDownloadConfig(type, version) {
       name: `${config.name} schema`,
       url: `${baseUrl}/${config.artefacts.schema.urlPath}`,
       filename: config.artefacts.schema.filename,
+    });
+  }
+
+  // Add vocabulary if it exists
+  if (config.artefacts.vocabulary) {
+    downloads.push({
+      name: `${config.name} vocabulary`,
+      url: `${baseUrl}/${config.artefacts.vocabulary.urlPath}`,
+      filename: config.artefacts.vocabulary.filename,
     });
   }
 

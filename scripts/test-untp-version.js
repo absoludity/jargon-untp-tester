@@ -135,6 +135,11 @@ function showSummary(version, types) {
         `├── ${chalk.cyan(`${type}.context.jsonld`)} - JSON-LD context`,
       ),
     );
+    console.log(
+      chalk.gray(
+        `├── ${chalk.cyan(`${type}.vocabulary.jsonld`)} - RDF vocabulary`,
+      ),
+    );
 
     if (hasSchema) {
       console.log(
@@ -159,8 +164,8 @@ function showSummary(version, types) {
         ),
       );
     } else if (!hasSchema) {
-      // Context only
-      console.log(chalk.gray(`    (context file only)`));
+      // Context and vocabulary only
+      console.log(chalk.gray(`    (context and vocabulary files only)`));
     }
   }
 }

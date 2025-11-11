@@ -31,6 +31,7 @@ function createArtefactPaths(version, type) {
   return {
     versionDir,
     contextPath: getArtefactPath(versionDir, `${type}.context.jsonld`),
+    vocabularyPath: getArtefactPath(versionDir, `${type}.vocabulary.jsonld`),
     schemaPath: getArtefactPath(versionDir, `${type}.schema.json`),
     samplePath: getArtefactPath(versionDir, `${type}.sample.json`),
     expandedPath: getArtefactPath(versionDir, `${type}.sample.expanded.json`),
