@@ -1,32 +1,34 @@
-# UNTP Testing Tool
+# Jargon.sh artefact UNTP Testing Tool
 
-A Node.js tool for downloading and validating UN Transparency Protocol (UNTP)
-files from the Jargon registry during development.
-
-It's really just a temporary helper for downloading Jargon artefacts while we
-don't have the great CI which we had on github available on the new gitlab repo.
-
-TODO: we could even make this just a downloader and integrate the recently
-integrated untp-tests functionality for the testing - I'll add that next.
+A Node.js tool for downloading and validating UN Transparency Protocol (UNTP) files from the Jargon registry.
 
 ## Features
 
 ### Current Functionality
 
-- Downloads UNTP Digital Product Passport (DPP) files for any version
-- Smart caching: only downloads files that don't already exist
-- Validates JSON-LD expansion with comprehensive error reporting
-- Updates sample files to use local context files for offline testing
-- Organizes downloads by version in `downloads/` directory
+- **Multi-type Support**: Downloads and validates multiple UNTP credential types (DPP, DCC)
+- **Smart Caching**: Only downloads files that don't already exist locally
+- **Comprehensive Validation**:
+  - JSON Schema validation using AJV with 2020-12 support
+  - JSON-LD expansion validation with detailed error reporting
+- **Local Context Testing**: Creates separate sample files with local context references for offline testing
+- **Modular Architecture**: Clean separation of concerns for easy extension
+- **Configurable**: Easy to add new UNTP credential types via configuration
 
-### Files Downloaded per Version
+### Supported UNTP Types
 
-For each version (e.g., `0.6.1`), the tool downloads:
+- **DPP**: Digital Product Passport
+- **DCC**: Digital Conformity Credential
 
-- `dpp.context.jsonld` - JSON-LD context definitions
-- `dpp.schema.json` - JSON Schema for validation
-- `dpp.sample.json` - Sample instance data
-- `dpp.sample.expanded.json` - Expanded JSON-LD (generated locally)
+### Files Downloaded per Type
+
+For each UNTP type and version, the tool downloads:
+
+- `{type}.context.jsonld` - JSON-LD context definitions
+- `{type}.schema.json` - JSON Schema for validation
+- `{type}.sample.json` - Original sample instance data
+- `{type}.sample.local-context.json` - Sample modified to use local context
+- `{type}.sample.expanded.json` - Expanded JSON-LD (generated locally)
 
 ## Installation
 
@@ -38,101 +40,105 @@ npm install
 
 ### Via npm script (recommended)
 ```bash
-npm run test-version -- <version>
+npm run test-version -- <version> [--types <type1,type2>]
 ```
 
 ### Direct execution
 ```bash
-node scripts/test-untp-version.js <version>
+node scripts/test-untp-version.js <version> [--types <type1,type2>]
 ```
 
 ### Examples
 ```bash
-# Test stable version
+# Test DPP for stable version (default)
 npm run test-version -- 0.6.1
+
+# Test DCC for stable version
+npm run test-version -- 0.6.1 --types dcc
+
+# Test both DPP and DCC
+npm run test-version -- 0.6.1 --types dpp,dcc
 
 # Test development version
 npm run test-version -- working
+
+# Show help
+npm run test-version -- --help
 ```
 
 ## Validation Process
 
-1. Downloads required files (if not already present)
-2. Updates sample file to reference local context
-3. Runs JSON-LD expansion in safe mode for strict validation
-4. If validation fails, re-runs in warning mode to collect all errors
-5. Reports comprehensive validation issues with specific property details
+For each UNTP type:
+
+1. **Download Files**: Downloads context, schema, and sample files (if not already present)
+2. **JSON Schema Validation**: Validates original sample against JSON Schema using AJV 2020-12
+3. **Local Context Creation**: Creates copy of sample with local context references
+4. **JSON-LD Expansion**: Runs JSON-LD expansion in safe mode for strict validation
+5. **Error Reporting**: If validation fails, provides comprehensive error details
+6. **Analysis Files**: Creates expanded JSON-LD files for debugging even when validation fails
 
 ## Directory Structure
 
 ```
 downloads/
-├── 0.6.1/
-│   ├── dpp.context.jsonld
-│   ├── dpp.schema.json
-│   ├── dpp.sample.json
-│   └── dpp.sample.expanded.json
-└── working/
+└── 0.6.1/
     ├── dpp.context.jsonld
     ├── dpp.schema.json
-    └── dpp.sample.json
+    ├── dpp.sample.json
+    ├── dpp.sample.local-context.json
+    ├── dpp.sample.expanded.json
+    ├── dcc.context.jsonld
+    ├── dcc.schema.json
+    ├── dcc.sample.json
+    ├── dcc.sample.local-context.json
+    └── dcc.sample.expanded.json
 ```
 
 Note: `downloads/` is git-ignored to keep repository clean.
 
 ## Error Handling
 
-- Invalid versions: Fails with HTTP 404 error
-- Validation errors: Reports all issues with specific property names and reasons
-- Network issues: Provides clear error messages with retry suggestions
+- **Invalid versions**: Fails with HTTP 404 error
+- **Invalid types**: Lists available types and exits
+- **JSON Schema validation errors**: Shows detailed error paths and values
+- **JSON-LD validation errors**: Reports all validation issues with property details
+- **Protected term redefinition**: Shows specific context conflicts
+- **Network issues**: Provides clear error messages
 
-## Future Plans
+## Architecture
 
-### Generalization for All UNTP Types
+The tool uses a modular architecture:
 
-The tool will be extended to support the full range of UNTP specifications:
+```
+scripts/
+├── test-untp-version.js           (Main CLI orchestration)
+└── lib/
+    ├── artefact-config.js          (UNTP type configurations)
+    ├── downloader.js              (File download functionality)
+    ├── file-utils.js              (Path and file utilities)
+    ├── json-schema-validator.js   (JSON Schema validation)
+    └── jsonld-processor.js        (JSON-LD processing and expansion)
+```
 
-#### Planned UNTP Types
-- **Digital Product Passport (DPP)** - Currently supported
-- **Digital Conformity Credential (DCC)** - Planned
-- **Digital Traceability Event (DTE)** - Planned
-- **Digital Facility Record (DFR)** - Planned
+### Adding New UNTP Types
 
-#### Planned Enhancements
+To add support for new UNTP credential types, add configuration to `scripts/lib/artefact-config.js`:
 
-1. **Multi-type Downloads**
-   ```bash
-   npm run test-version -- 0.6.1 --types dpp,dcc,dte
-   npm run test-version -- 0.6.1 --all
-   ```
-
-2. **Shared Context Management**
-   - Download shared `core.context.jsonld` once per version
-   - Each type will reference shared contexts appropriately
-
-3. **Cross-type Validation**
-   - Validate interactions between different UNTP types
-   - Test credential chains and traceability links
-
-4. **Enhanced File Organization**
-   ```
-   downloads/
-   └── 0.6.1/
-       ├── core.context.jsonld
-       ├── dpp.context.jsonld
-       ├── dpp.schema.json
-       ├── dpp.sample.json
-       ├── dpp.sample.expanded.json
-       ├── dcc.context.jsonld
-       ├── dcc.schema.json
-       ├── dcc.sample.json
-       └── dcc.sample.expanded.json
-   ```
-
-5. **Comprehensive Testing Suite**
-   - Validate all types in a version
-   - Check for consistency across types
-   - Generate compatibility reports
+```javascript
+newtype: {
+  name: "New Type Name",
+  baseUrl: (version) => `https://jargon.sh/user/unece/NewType/v/${version}/artefacts`,
+  artefacts: {
+    context: {
+      urlPath: "jsonldContexts/NewType.jsonld?class=NewType",
+      filename: "newtype.context.jsonld"
+    },
+    // ... schema and sample configurations
+  },
+  contextPattern: (version) => `https://test.uncefact.org/vocabulary/untp/newtype/${version}/`,
+  localContextFile: "./newtype.context.jsonld"
+}
+```
 
 ## Dependencies
 
@@ -140,7 +146,26 @@ The tool will be extended to support the full range of UNTP specifications:
 - `ora` - Progress spinners
 - `jsonld` - JSON-LD processing and validation
 - `jsonld-cli` - Command-line JSON-LD tools
+- `ajv` - JSON Schema validation with 2020-12 support
+- `ajv-formats` - Additional format validators for AJV
 
-## Development
+## Development Workflow
 
-The tool is designed for iterative testing workflows where files may be modified locally and re-tested. It respects manual changes to downloaded files and only overwrites the expanded JSON-LD output on each test run.
+The tool is designed for iterative development workflows:
+
+1. **Download once**: Files are cached locally and won't be re-downloaded
+2. **Modify contexts**: Edit downloaded context files locally
+3. **Re-test**: Run the tool again to validate changes
+4. **Preserve originals**: Original samples are never modified
+5. **Local testing**: Local context samples allow offline validation
+
+The tool respects manual changes to downloaded files and only regenerates the local context and expanded JSON-LD files on each run.
+
+## Future Enhancements
+
+- **UNTP Core Support**: Add support for shared core contexts
+- **Digital Traceability Events (DTE)**: Add DTE credential support
+- **Digital Facility Records (DFR)**: Add DFR credential support
+- **Cross-type Validation**: Validate relationships between credential types
+- **Batch Processing**: Process multiple versions simultaneously
+- **Integration Testing**: Validate credential chains and dependencies
