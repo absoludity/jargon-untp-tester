@@ -6,45 +6,133 @@
 const UNTP_ARTEFACT_CONFIGS = {
   dpp: {
     name: "Digital Product Passport",
-    baseUrl: (version) => `https://jargon.sh/user/unece/DigitalProductPassport/v/${version}/artefacts`,
+    baseUrl: (version) =>
+      `https://jargon.sh/user/unece/DigitalProductPassport/v/${version}/artefacts`,
     artefacts: {
       context: {
-        urlPath: "jsonldContexts/DigitalProductPassport.jsonld?class=DigitalProductPassport",
-        filename: "dpp.context.jsonld"
+        urlPath:
+          "jsonldContexts/DigitalProductPassport.jsonld?class=DigitalProductPassport",
+        filename: "dpp.context.jsonld",
       },
       schema: {
-        urlPath: "jsonSchemas/DigitalProductPassport.json?class=DigitalProductPassport",
-        filename: "dpp.schema.json"
+        urlPath:
+          "jsonSchemas/DigitalProductPassport.json?class=DigitalProductPassport",
+        filename: "dpp.schema.json",
       },
       sample: {
-        urlPath: "jsonSchemas/DigitalProductPassport_instance.json?class=DigitalProductPassport_instance",
-        filename: "dpp.sample.json"
-      }
+        urlPath:
+          "jsonSchemas/DigitalProductPassport_instance.json?class=DigitalProductPassport_instance",
+        filename: "dpp.sample.json",
+      },
     },
-    contextPattern: (version) => `https://test.uncefact.org/vocabulary/untp/dpp/${version}/`,
-    localContextFile: "./dpp.context.jsonld"
+    contextPattern: (version) =>
+      `https://test.uncefact.org/vocabulary/untp/dpp/${version}/`,
+    localContextFile: "./dpp.context.jsonld",
   },
 
   dcc: {
     name: "Digital Conformity Credential",
-    baseUrl: (version) => `https://jargon.sh/user/unece/ConformityCredential/v/${version}/artefacts`,
+    baseUrl: (version) =>
+      `https://jargon.sh/user/unece/ConformityCredential/v/${version}/artefacts`,
     artefacts: {
       context: {
-        urlPath: "jsonldContexts/ConformityCredential.jsonld?class=ConformityCredential",
-        filename: "dcc.context.jsonld"
+        urlPath:
+          "jsonldContexts/ConformityCredential.jsonld?class=ConformityCredential",
+        filename: "dcc.context.jsonld",
       },
       schema: {
-        urlPath: "jsonSchemas/DigitalConformityCredential.json?class=DigitalConformityCredential",
-        filename: "dcc.schema.json"
+        urlPath:
+          "jsonSchemas/DigitalConformityCredential.json?class=DigitalConformityCredential",
+        filename: "dcc.schema.json",
       },
       sample: {
-        urlPath: "jsonSchemas/DigitalConformityCredential_instance.json?class=DigitalConformityCredential_instance",
-        filename: "dcc.sample.json"
-      }
+        urlPath:
+          "jsonSchemas/DigitalConformityCredential_instance.json?class=DigitalConformityCredential_instance",
+        filename: "dcc.sample.json",
+      },
     },
-    contextPattern: (version) => `https://test.uncefact.org/vocabulary/untp/dcc/${version}/`,
-    localContextFile: "./dcc.context.jsonld"
-  }
+    contextPattern: (version) =>
+      `https://test.uncefact.org/vocabulary/untp/dcc/${version}/`,
+    localContextFile: "./dcc.context.jsonld",
+  },
+
+  dfr: {
+    name: "Digital Facility Record",
+    baseUrl: (version) =>
+      `https://jargon.sh/user/unece/DigitalFacilityRecord/v/${version}/artefacts`,
+    artefacts: {
+      context: {
+        urlPath:
+          "jsonldContexts/DigitalFacilityRecord.jsonld?class=DigitalFacilityRecord",
+        filename: "dfr.context.jsonld",
+      },
+      schema: {
+        urlPath:
+          "jsonSchemas/DigitalFacilityRecord.json?class=DigitalFacilityRecord",
+        filename: "dfr.schema.json",
+      },
+      sample: {
+        urlPath:
+          "jsonSchemas/DigitalFacilityRecord_instance.json?class=DigitalFacilityRecord_instance",
+        filename: "dfr.sample.json",
+      },
+    },
+    contextPattern: (version) =>
+      `https://test.uncefact.org/vocabulary/untp/dfr/${version}/`,
+    localContextFile: "./dfr.context.jsonld",
+  },
+
+  dia: {
+    name: "Digital Identity Anchor",
+    baseUrl: (version) =>
+      `https://jargon.sh/user/unece/DigitalIdentityAnchor/v/${version}/artefacts`,
+    artefacts: {
+      context: {
+        urlPath:
+          "jsonldContexts/DigitalIdentityAnchor.jsonld?class=DigitalIdentityAnchor",
+        filename: "dia.context.jsonld",
+      },
+      schema: {
+        urlPath:
+          "jsonSchemas/DigitalIdentityAnchor.json?class=DigitalIdentityAnchor",
+        filename: "dia.schema.json",
+      },
+      sample: {
+        urlPath:
+          "jsonSchemas/DigitalIdentityAnchor_instance.json?class=DigitalIdentityAnchor_instance",
+        filename: "dia.sample.json",
+      },
+    },
+    contextPattern: (version) =>
+      `https://test.uncefact.org/vocabulary/untp/dia/${version}/`,
+    localContextFile: "./dia.context.jsonld",
+  },
+
+  dte: {
+    name: "Digital Traceability Event",
+    baseUrl: (version) =>
+      `https://jargon.sh/user/unece/traceabilityEvents/v/${version}/artefacts`,
+    artefacts: {
+      context: {
+        urlPath:
+          "jsonldContexts/traceabilityEvents.jsonld?class=traceabilityEvents",
+        filename: "dte.context.jsonld",
+      },
+      schema: {
+        urlPath:
+          "jsonSchemas/DigitalTraceabilityEvent.json?class=DigitalTraceabilityEvent",
+        filename: "dte.schema.json",
+      },
+      sample: {
+        urlPath:
+          "jsonSchemas/DigitalTraceabilityEvent_instance.json?class=DigitalTraceabilityEvent_instance",
+        filename: "dte.sample.json",
+      },
+    },
+    contextPattern: (version) =>
+      `https://test.uncefact.org/vocabulary/untp/dte/${version}/`,
+    localContextFile: "./dte.context.jsonld",
+  },
 };
 
 /**
@@ -53,7 +141,9 @@ const UNTP_ARTEFACT_CONFIGS = {
 function getArtefactConfig(type) {
   const config = UNTP_ARTEFACT_CONFIGS[type];
   if (!config) {
-    throw new Error(`Unknown UNTP artefact type: ${type}. Available types: ${Object.keys(UNTP_ARTEFACT_CONFIGS).join(', ')}`);
+    throw new Error(
+      `Unknown UNTP artefact type: ${type}. Available types: ${Object.keys(UNTP_ARTEFACT_CONFIGS).join(", ")}`,
+    );
   }
   return config;
 }
@@ -80,21 +170,21 @@ function generateDownloadConfig(type, version) {
       {
         name: `${config.name} context`,
         url: `${baseUrl}/${config.artefacts.context.urlPath}`,
-        filename: config.artefacts.context.filename
+        filename: config.artefacts.context.filename,
       },
       {
         name: `${config.name} schema`,
         url: `${baseUrl}/${config.artefacts.schema.urlPath}`,
-        filename: config.artefacts.schema.filename
+        filename: config.artefacts.schema.filename,
       },
       {
         name: `${config.name} sample`,
         url: `${baseUrl}/${config.artefacts.sample.urlPath}`,
-        filename: config.artefacts.sample.filename
-      }
+        filename: config.artefacts.sample.filename,
+      },
     ],
     contextPattern: config.contextPattern(version),
-    localContextFile: config.localContextFile
+    localContextFile: config.localContextFile,
   };
 }
 
@@ -102,5 +192,5 @@ module.exports = {
   getArtefactConfig,
   getAvailableTypes,
   generateDownloadConfig,
-  UNTP_ARTEFACT_CONFIGS
+  UNTP_ARTEFACT_CONFIGS,
 };
