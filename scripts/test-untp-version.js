@@ -14,15 +14,38 @@ const {
   ensureDirectoryExists,
   createArtefactPaths,
 } = require("./lib/file-utils");
+const {
+  getAvailableTypes,
+  generateDownloadConfig,
+} = require("./lib/artefact-config");
 
-async function downloadUntpVersion(version) {
+async function downloadUntpVersion(version, types = ["dpp"]) {
   console.log(
-    chalk.blue.bold(`\n🧪 Testing UNTP files for version ${version}...\n`),
+    chalk.blue.bold(
+      `\n🧪 Testing UNTP files for version ${version} (types: ${types.join(", ")})...\n`,
+    ),
   );
 
-  // Create directory structure
-  const { versionDir, contextPath, schemaPath, samplePath, expandedPath } =
-    createArtefactPaths(version, "dpp");
+  for (const type of types) {
+    await processUntpType(version, type);
+  }
+}
+
+async function processUntpType(version, type) {
+  console.log(chalk.yellow(`\n--- Processing ${type.toUpperCase()} ---`));
+
+  // Get configuration for this type
+  const config = generateDownloadConfig(type, version);
+
+  // Create directory structure and paths
+  const {
+    versionDir,
+    contextPath,
+    schemaPath,
+    samplePath,
+    expandedPath,
+    localContextSamplePath,
+  } = createArtefactPaths(version, type);
 
   try {
     await ensureDirectoryExists(versionDir);
@@ -33,31 +56,11 @@ async function downloadUntpVersion(version) {
     process.exit(1);
   }
 
-  // Base URL for DPP artefacts
-  const dppArtefactsBaseUrl = `https://jargon.sh/user/unece/DigitalProductPassport/v/${version}/artefacts`;
-
-  const downloads = [
-    {
-      name: "DigitalProductPassport context",
-      url: `${dppArtefactsBaseUrl}/jsonldContexts/DigitalProductPassport.jsonld?class=DigitalProductPassport`,
-      output: contextPath,
-    },
-    {
-      name: "DigitalProductPassport schema",
-      url: `${dppArtefactsBaseUrl}/jsonSchemas/DigitalProductPassport.json?class=DigitalProductPassport`,
-      output: schemaPath,
-    },
-    {
-      name: "DigitalProductPassport sample",
-      url: `${dppArtefactsBaseUrl}/jsonSchemas/DigitalProductPassport_instance.json?class=DigitalProductPassport_instance`,
-      output: samplePath,
-    },
-  ];
-
-  // Download all files
-  for (const download of downloads) {
+  // Download all files for this type
+  for (const download of config.downloads) {
     try {
-      const result = await downloadFile(download.url, download.output);
+      const outputPath = path.join(versionDir, download.filename);
+      const result = await downloadFile(download.url, outputPath);
       download.wasDownloaded = result.wasDownloaded;
     } catch (error) {
       process.exit(1);
@@ -72,76 +75,141 @@ async function downloadUntpVersion(version) {
   }
 
   // Create local context version for JSON-LD testing
-  const localContextSamplePath = await createLocalContextSample(
+  const localContextSampleResult = await createLocalContextSample(
     samplePath,
-    version,
+    config.contextPattern,
+    config.localContextFile,
   );
-  if (!localContextSamplePath) {
+  if (!localContextSampleResult) {
     process.exit(1);
   }
 
   // Expand the local context sample JSON-LD (always run - this is the test!)
   try {
-    await runJsonLdExpand(localContextSamplePath, expandedPath);
+    await runJsonLdExpand(localContextSampleResult, expandedPath);
   } catch (error) {
     process.exit(1);
   }
 
+  // Show completion for this type
+  console.log(chalk.green(`✓ Completed processing ${type.toUpperCase()}`));
+}
+
+function showSummary(version, types) {
+  const versionDir = path.join("downloads", version);
   console.log(
     chalk.green.bold(
       `\n✅ Done! Files ready in ${chalk.cyan(versionDir + "/")}`,
     ),
   );
-  console.log(chalk.gray(`\nFiles created:`));
-  console.log(
-    chalk.gray(`├── ${chalk.cyan("dpp.context.jsonld")} - JSON-LD context`),
-  );
-  console.log(chalk.gray(`├── ${chalk.cyan("dpp.schema.json")} - JSON Schema`));
-  console.log(
-    chalk.gray(
-      `├── ${chalk.cyan("dpp.sample.json")} - Original sample instance`,
-    ),
-  );
-  console.log(
-    chalk.gray(
-      `├── ${chalk.cyan("dpp.sample.local-context.json")} - Sample with local context`,
-    ),
-  );
-  console.log(
-    chalk.gray(
-      `└── ${chalk.cyan("dpp.sample.expanded.json")} - Expanded JSON-LD`,
-    ),
-  );
+  console.log(chalk.gray(`\nFiles created for types: ${types.join(", ")}`));
+
+  for (const type of types) {
+    console.log(chalk.gray(`\n${type.toUpperCase()} files:`));
+    console.log(
+      chalk.gray(
+        `├── ${chalk.cyan(`${type}.context.jsonld`)} - JSON-LD context`,
+      ),
+    );
+    console.log(
+      chalk.gray(`├── ${chalk.cyan(`${type}.schema.json`)} - JSON Schema`),
+    );
+    console.log(
+      chalk.gray(
+        `├── ${chalk.cyan(`${type}.sample.json`)} - Original sample instance`,
+      ),
+    );
+    console.log(
+      chalk.gray(
+        `├── ${chalk.cyan(`${type}.sample.local-context.json`)} - Sample with local context`,
+      ),
+    );
+    console.log(
+      chalk.gray(
+        `└── ${chalk.cyan(`${type}.sample.expanded.json`)} - Expanded JSON-LD`,
+      ),
+    );
+  }
 }
 
 function showUsage() {
+  console.log(chalk.yellow("Usage:"));
   console.log(
-    chalk.yellow("Usage:"),
-    "node test-untp-version.js",
+    "  node test-untp-version.js",
     chalk.green("<version>"),
-  );
-  console.log(
-    chalk.yellow("Example:"),
-    "node test-untp-version.js",
-    chalk.green("0.6.1"),
+    chalk.blue("[options]"),
   );
   console.log();
+  console.log(chalk.yellow("Options:"));
   console.log(
-    chalk.yellow("Or via npm:"),
-    "npm run test-version --",
-    chalk.green("<version>"),
+    "  --types",
+    chalk.green("<type1,type2>"),
+    "  UNTP types to process (default: dpp)",
   );
+  console.log("  --help                    Show this help message");
+  console.log();
+  console.log(chalk.yellow("Available types:"), getAvailableTypes().join(", "));
+  console.log();
+  console.log(chalk.yellow("Examples:"));
+  console.log("  node test-untp-version.js", chalk.green("0.6.1"));
+  console.log(
+    "  node test-untp-version.js",
+    chalk.green("0.6.1"),
+    chalk.blue("--types dpp"),
+  );
+  console.log(
+    "  node test-untp-version.js",
+    chalk.green("0.6.1"),
+    chalk.blue("--types dpp,dcc"),
+  );
+  console.log();
+  console.log(chalk.yellow("Or via npm:"));
+  console.log("  npm run test-version --", chalk.green("0.6.1"));
+  console.log(
+    "  npm run test-version --",
+    chalk.green("0.6.1"),
+    chalk.blue("--types dcc"),
+  );
+}
+
+// Parse command line arguments
+function parseArgs() {
+  const args = process.argv.slice(2);
+
+  if (args.length === 0 || args.includes("--help")) {
+    showUsage();
+    process.exit(args.includes("--help") ? 0 : 1);
+  }
+
+  const version = args[0];
+  let types = ["dpp"]; // default
+
+  const typesIndex = args.indexOf("--types");
+  if (typesIndex !== -1 && args[typesIndex + 1]) {
+    types = args[typesIndex + 1].split(",").map((t) => t.trim());
+
+    // Validate types
+    const availableTypes = getAvailableTypes();
+    for (const type of types) {
+      if (!availableTypes.includes(type)) {
+        console.log(chalk.red(`\n❌ Unknown type: ${type}`));
+        console.log(
+          chalk.gray(`Available types: ${availableTypes.join(", ")}`),
+        );
+        process.exit(1);
+      }
+    }
+  }
+
+  return { version, types };
 }
 
 // Main execution
-if (process.argv.length < 3) {
-  showUsage();
-  process.exit(1);
-}
+const { version, types } = parseArgs();
 
-const version = process.argv[2];
-
-downloadUntpVersion(version).catch((error) => {
-  console.log(chalk.red(`\n❌ Error: ${error.message}`));
-  process.exit(1);
-});
+downloadUntpVersion(version, types)
+  .then(() => showSummary(version, types))
+  .catch((error) => {
+    console.log(chalk.red(`\n❌ Error: ${error.message}`));
+    process.exit(1);
+  });

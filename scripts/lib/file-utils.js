@@ -22,18 +22,22 @@ function getVersionDirectory(version) {
   return path.join("downloads", version);
 }
 
-function getArtefactPath(versionDir, artefactName) {
-  return path.join(versionDir, artefactName);
+function getArtefactPath(versionDir, filename) {
+  return path.join(versionDir, filename);
 }
 
-function createArtefactPaths(version, prefix) {
+function createArtefactPaths(version, type) {
   const versionDir = getVersionDirectory(version);
   return {
     versionDir,
-    contextPath: getArtefactPath(versionDir, `${prefix}.context.jsonld`),
-    schemaPath: getArtefactPath(versionDir, `${prefix}.schema.json`),
-    samplePath: getArtefactPath(versionDir, `${prefix}.sample.json`),
-    expandedPath: getArtefactPath(versionDir, `${prefix}.sample.expanded.json`),
+    contextPath: getArtefactPath(versionDir, `${type}.context.jsonld`),
+    schemaPath: getArtefactPath(versionDir, `${type}.schema.json`),
+    samplePath: getArtefactPath(versionDir, `${type}.sample.json`),
+    expandedPath: getArtefactPath(versionDir, `${type}.sample.expanded.json`),
+    localContextSamplePath: getArtefactPath(
+      versionDir,
+      `${type}.sample.local-context.json`,
+    ),
   };
 }
 

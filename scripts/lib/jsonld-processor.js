@@ -4,24 +4,27 @@ const chalk = require("chalk");
 const ora = require("ora");
 const jsonld = require("jsonld");
 
-async function createLocalContextSample(samplePath, version) {
+async function createLocalContextSample(
+  samplePath,
+  contextPattern,
+  localContextFile,
+) {
   const spinner = ora("Creating sample with local context...").start();
 
   try {
     const content = await fs.readFile(samplePath, "utf8");
     const jsonData = JSON.parse(content);
 
-    // Find and update the DPP context URL in the @context array
+    // Find and update the UNTP context URL in the @context array
     if (jsonData["@context"] && Array.isArray(jsonData["@context"])) {
       const contextArray = jsonData["@context"];
-      const dppUrlPattern = `https://test.uncefact.org/vocabulary/untp/dpp/${version}/`;
 
       for (let i = 0; i < contextArray.length; i++) {
         if (
           typeof contextArray[i] === "string" &&
-          contextArray[i].includes(dppUrlPattern)
+          contextArray[i].includes(contextPattern)
         ) {
-          contextArray[i] = "./dpp.context.jsonld";
+          contextArray[i] = localContextFile;
           break;
         }
       }
