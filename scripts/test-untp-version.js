@@ -5,6 +5,8 @@ const path = require("path");
 const chalk = require("chalk");
 const ora = require("ora");
 const jsonld = require("jsonld");
+const Ajv = require("ajv/dist/2020");
+const addFormats = require("ajv-formats");
 
 async function downloadFile(url, outputPath) {
   // Check if file already exists
@@ -46,8 +48,8 @@ async function downloadFile(url, outputPath) {
   }
 }
 
-async function updateSampleContext(samplePath, version) {
-  const spinner = ora("Updating sample file to use local context...").start();
+async function createLocalContextSample(samplePath, version) {
+  const spinner = ora("Creating sample with local context...").start();
 
   try {
     const content = await fs.readFile(samplePath, "utf8");
@@ -69,16 +71,20 @@ async function updateSampleContext(samplePath, version) {
       }
     }
 
-    // Write back with proper formatting
-    await fs.writeFile(samplePath, JSON.stringify(jsonData, null, 2) + "\n");
+    // Write to new file with local context suffix
+    const localContextPath = samplePath.replace(".json", ".local-context.json");
+    await fs.writeFile(
+      localContextPath,
+      JSON.stringify(jsonData, null, 2) + "\n",
+    );
 
     spinner.succeed(
-      `Updated ${chalk.cyan(path.basename(samplePath))} to use local context`,
+      `Created ${chalk.cyan(path.basename(localContextPath))} with local context`,
     );
-    return true;
+    return localContextPath;
   } catch (error) {
-    spinner.fail(`Error updating sample file: ${error.message}`);
-    return false;
+    spinner.fail(`Error creating local context sample: ${error.message}`);
+    return null;
   }
 }
 
@@ -241,37 +247,29 @@ async function downloadUntpVersion(version) {
   const samplePath = path.join(versionDir, "dpp.sample.json");
   const expandedPath = path.join(versionDir, "dpp.sample.expanded.json");
 
-  // Only update the sample file context if it was just downloaded
-  let sampleExists = false;
+  // Validate original sample against schema
+  const schemaPath = path.join(versionDir, "dpp.schema.json");
   try {
-    await fs.access(samplePath);
-    sampleExists = true;
+    await validateJsonSchema(samplePath, schemaPath);
   } catch (error) {
-    // Sample file doesn't exist, something went wrong
-    console.log(chalk.red("✗ Sample file not found after download"));
+    // Continue even if schema validation fails
+  }
+
+  // Create local context version for JSON-LD testing
+  const localContextSamplePath = await createLocalContextSample(
+    samplePath,
+    version,
+  );
+  if (!localContextSamplePath) {
     process.exit(1);
   }
 
-  // Update the sample file to use local context only if it was downloaded
-  if (
-    downloads.some(
-      (d) => path.basename(d.output) === "dpp.sample.json" && d.wasDownloaded,
-    )
-  ) {
-    const success = await updateSampleContext(samplePath, version);
-
-    if (!success) {
-      process.exit(1);
-    }
-  }
-
-  // Expand the sample JSON-LD (always run - this is the test!)
+  // Expand the local context sample JSON-LD (always run - this is the test!)
   try {
-    await runJsonLdExpand(samplePath, expandedPath);
+    await runJsonLdExpand(localContextSamplePath, expandedPath);
   } catch (error) {
     process.exit(1);
   }
-
   console.log(
     chalk.green.bold(
       `\n✅ Done! Files ready in ${chalk.cyan(versionDir + "/")}`,
@@ -283,13 +281,79 @@ async function downloadUntpVersion(version) {
   );
   console.log(chalk.gray(`├── ${chalk.cyan("dpp.schema.json")} - JSON Schema`));
   console.log(
-    chalk.gray(`├── ${chalk.cyan("dpp.sample.json")} - Sample instance`),
+    chalk.gray(
+      `├── ${chalk.cyan("dpp.sample.json")} - Original sample instance`,
+    ),
+  );
+  console.log(
+    chalk.gray(
+      `├── ${chalk.cyan("dpp.sample.local-context.json")} - Sample with local context`,
+    ),
   );
   console.log(
     chalk.gray(
       `└── ${chalk.cyan("dpp.sample.expanded.json")} - Expanded JSON-LD`,
     ),
   );
+}
+
+async function validateJsonSchema(samplePath, schemaPath) {
+  const spinner = ora("Validating JSON Schema...").start();
+
+  try {
+    // Read schema and sample files
+    const schemaContent = await fs.readFile(schemaPath, "utf8");
+    const sampleContent = await fs.readFile(samplePath, "utf8");
+
+    const schema = JSON.parse(schemaContent);
+    const sample = JSON.parse(sampleContent);
+
+    // Create AJV instance with 2020-12 support (matching UNTP test suite)
+    const ajv = new Ajv({
+      allErrors: true,
+      verbose: true,
+      strict: false,
+      schemaId: "$id",
+      validateSchema: false, // Disable to prevent meta-schema validation issues
+    });
+
+    // Add format support
+    addFormats(ajv);
+
+    // Compile schema
+    const validate = ajv.compile(schema);
+
+    // Validate sample
+    const valid = validate(sample);
+
+    if (valid) {
+      spinner.succeed(`JSON Schema validation passed`);
+    } else {
+      spinner.fail(`JSON Schema validation failed`);
+      console.log(
+        chalk.red(`\n📋 Found ${validate.errors.length} schema error(s):`),
+      );
+      validate.errors.forEach((error, index) => {
+        console.log(
+          chalk.red(
+            `\n${index + 1}. ${error.instancePath || "root"}: ${error.message}`,
+          ),
+        );
+        if (error.data !== undefined) {
+          console.log(chalk.gray(`   Value: ${JSON.stringify(error.data)}`));
+        }
+        if (error.schemaPath) {
+          console.log(chalk.gray(`   Schema path: ${error.schemaPath}`));
+        }
+      });
+      throw new Error("JSON Schema validation failed");
+    }
+  } catch (error) {
+    if (!error.message.includes("JSON Schema validation failed")) {
+      spinner.fail(`JSON Schema validation error: ${error.message}`);
+    }
+    throw error;
+  }
 }
 
 function showUsage() {
