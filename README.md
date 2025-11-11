@@ -17,8 +17,13 @@ A Node.js tool for downloading and validating UN Transparency Protocol (UNTP) fi
 
 ### Supported UNTP Types
 
-- **DPP**: Digital Product Passport
-- **DCC**: Digital Conformity Credential
+Now supports **all 6 UNTP components**:
+1. **CORE** - UNTP Core contexts (foundation vocabularies)
+2. **DPP** - Digital Product Passport
+3. **DCC** - Digital Conformity Credential
+4. **DFR** - Digital Facility Record  
+5. **DIA** - Digital Identity Anchor
+6. **DTE** - Digital Traceability Event
 
 ### Files Downloaded per Type
 
@@ -56,8 +61,15 @@ npm run test-version -- 0.6.1
 # Test DCC for stable version
 npm run test-version -- 0.6.1 --types dcc
 
-# Test both DPP and DCC
+# Test multiple types
 npm run test-version -- 0.6.1 --types dpp,dcc
+npm run test-version -- 0.6.1 --types dfr,dia,dte
+
+# Test with core contexts
+npm run test-version -- 0.6.1 --types core,dpp
+
+# Test all UNTP types
+npm run test-version -- 0.6.1 --types core,dpp,dcc,dfr,dia,dte
 
 # Test development version
 npm run test-version -- working
@@ -82,6 +94,7 @@ For each UNTP type:
 ```
 downloads/
 └── 0.6.1/
+    ├── core.context.jsonld
     ├── dpp.context.jsonld
     ├── dpp.schema.json
     ├── dpp.sample.json
@@ -91,7 +104,22 @@ downloads/
     ├── dcc.schema.json
     ├── dcc.sample.json
     ├── dcc.sample.local-context.json
-    └── dcc.sample.expanded.json
+    ├── dcc.sample.expanded.json
+    ├── dfr.context.jsonld
+    ├── dfr.schema.json
+    ├── dfr.sample.json
+    ├── dfr.sample.local-context.json
+    ├── dfr.sample.expanded.json
+    ├── dia.context.jsonld
+    ├── dia.schema.json
+    ├── dia.sample.json
+    ├── dia.sample.local-context.json
+    ├── dia.sample.expanded.json
+    ├── dte.context.jsonld
+    ├── dte.schema.json
+    ├── dte.sample.json
+    ├── dte.sample.local-context.json
+    └── dte.sample.expanded.json
 ```
 
 Note: `downloads/` is git-ignored to keep repository clean.
@@ -104,6 +132,7 @@ Note: `downloads/` is git-ignored to keep repository clean.
 - **JSON-LD validation errors**: Reports all validation issues with property details
 - **Protected term redefinition**: Shows specific context conflicts
 - **Network issues**: Provides clear error messages
+- **Context-only types**: Automatically detects and handles types with only context files
 
 ## Architecture
 
@@ -163,9 +192,9 @@ The tool respects manual changes to downloaded files and only regenerates the lo
 
 ## Future Enhancements
 
-- **UNTP Core Support**: Add support for shared core contexts
-- **Digital Traceability Events (DTE)**: Add DTE credential support
-- **Digital Facility Records (DFR)**: Add DFR credential support
+- **Auto-dependency Resolution**: Automatically download core when credentials reference it
 - **Cross-type Validation**: Validate relationships between credential types
 - **Batch Processing**: Process multiple versions simultaneously
-- **Integration Testing**: Validate credential chains and dependencies
+- **Integration Testing**: Validate credential chains and traceability links
+- **RDF Vocabulary Support**: Support additional RDF/OWL vocabulary artefacts
+- **Version Comparison**: Compare artefacts across versions to track changes
