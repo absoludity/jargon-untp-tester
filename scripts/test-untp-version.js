@@ -126,8 +126,16 @@ async function runJsonLdExpand(inputPath, outputPath) {
 
       spinner.succeed(`Created ${chalk.cyan(path.basename(outputPath))}`);
     } catch (error) {
-      // Safe mode failed - it doesn't collect detailed errors when it fails, so we need
-      // to re-run with safe mode false to collect all validation issues for detailed reporting
+      // Safe mode failed - show error details and try to create expanded file anyway
+      spinner.fail(`JSON-LD validation failed: ${error.message}`);
+
+      // Show error details if available
+      if (error.details) {
+        console.log(chalk.red("\n🚨 Error Details:"));
+        console.log(chalk.gray(JSON.stringify(error.details, null, 2)));
+      }
+
+      // Try to create expanded file anyway for analysis (in non-safe mode)
       const validationIssues = [];
       const warningOptions = {
         safe: false,
@@ -139,27 +147,36 @@ async function runJsonLdExpand(inputPath, outputPath) {
         },
       };
 
-      // Run without safe mode to collect all issues and create expanded file
-      const expanded = await jsonld.expand(doc, warningOptions);
-      await fs.writeFile(outputPath, JSON.stringify(expanded, null, 2) + "\n");
-
-      // Report the validation failure with all collected issues
-      spinner.fail(`JSON-LD validation failed in safe mode`);
-
-      if (validationIssues.length > 0) {
-        console.log(
-          chalk.red(
-            `\n📋 Found ${validationIssues.length} validation issue(s):`,
-          ),
+      try {
+        const expanded = await jsonld.expand(doc, warningOptions);
+        await fs.writeFile(
+          outputPath,
+          JSON.stringify(expanded, null, 2) + "\n",
         );
-        validationIssues.forEach((issue, index) => {
+        console.log(
+          chalk.gray(`\nCreated ${path.basename(outputPath)} for analysis`),
+        );
+
+        // Show any additional validation issues found
+        if (validationIssues.length > 0) {
           console.log(
-            chalk.red(`\n${index + 1}. ${issue.code}: ${issue.message}`),
+            chalk.yellow(
+              `\n📋 Additional validation warnings found (${validationIssues.length}):`,
+            ),
           );
-          if (issue.details) {
-            console.log(chalk.gray(JSON.stringify(issue.details, null, 2)));
-          }
-        });
+          validationIssues.forEach((issue, index) => {
+            console.log(
+              chalk.yellow(`\n${index + 1}. ${issue.code}: ${issue.message}`),
+            );
+            if (issue.details) {
+              console.log(chalk.gray(JSON.stringify(issue.details, null, 2)));
+            }
+          });
+        }
+      } catch (secondError) {
+        console.log(
+          chalk.red(`\nCould not create expanded file: ${secondError.message}`),
+        );
       }
 
       throw error;
