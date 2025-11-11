@@ -67,28 +67,44 @@ async function processUntpType(version, type) {
     }
   }
 
-  // Validate original sample against schema
-  try {
-    await validateJsonSchema(samplePath, schemaPath);
-  } catch (error) {
-    // Continue even if schema validation fails
-  }
-
-  // Create local context version for JSON-LD testing
-  const localContextSampleResult = await createLocalContextSample(
-    samplePath,
-    config.contextPattern,
-    config.localContextFile,
+  // Only do validation and expansion if this type has schema and sample files
+  const hasSchema = config.downloads.some((d) =>
+    d.filename.includes(".schema.json"),
   );
-  if (!localContextSampleResult) {
-    process.exit(1);
-  }
+  const hasSample = config.downloads.some((d) =>
+    d.filename.includes(".sample.json"),
+  );
 
-  // Expand the local context sample JSON-LD (always run - this is the test!)
-  try {
-    await runJsonLdExpand(localContextSampleResult, expandedPath);
-  } catch (error) {
-    process.exit(1);
+  if (hasSchema && hasSample) {
+    // Validate original sample against schema
+    try {
+      await validateJsonSchema(samplePath, schemaPath);
+    } catch (error) {
+      // Continue even if schema validation fails
+    }
+
+    // Create local context version for JSON-LD testing
+    const localContextSampleResult = await createLocalContextSample(
+      samplePath,
+      config.contextPattern,
+      config.localContextFile,
+    );
+    if (!localContextSampleResult) {
+      process.exit(1);
+    }
+
+    // Expand the local context sample JSON-LD (always run - this is the test!)
+    try {
+      await runJsonLdExpand(localContextSampleResult, expandedPath);
+    } catch (error) {
+      process.exit(1);
+    }
+  } else {
+    console.log(
+      chalk.gray(
+        `  Note: ${config.name} only has context file, skipping validation`,
+      ),
+    );
   }
 
   // Show completion for this type
@@ -105,30 +121,47 @@ function showSummary(version, types) {
   console.log(chalk.gray(`\nFiles created for types: ${types.join(", ")}`));
 
   for (const type of types) {
+    const config = generateDownloadConfig(type, "0.0.0"); // dummy version for config check
+    const hasSchema = config.downloads.some((d) =>
+      d.filename.includes(".schema.json"),
+    );
+    const hasSample = config.downloads.some((d) =>
+      d.filename.includes(".sample.json"),
+    );
+
     console.log(chalk.gray(`\n${type.toUpperCase()} files:`));
     console.log(
       chalk.gray(
         `├── ${chalk.cyan(`${type}.context.jsonld`)} - JSON-LD context`,
       ),
     );
-    console.log(
-      chalk.gray(`├── ${chalk.cyan(`${type}.schema.json`)} - JSON Schema`),
-    );
-    console.log(
-      chalk.gray(
-        `├── ${chalk.cyan(`${type}.sample.json`)} - Original sample instance`,
-      ),
-    );
-    console.log(
-      chalk.gray(
-        `├── ${chalk.cyan(`${type}.sample.local-context.json`)} - Sample with local context`,
-      ),
-    );
-    console.log(
-      chalk.gray(
-        `└── ${chalk.cyan(`${type}.sample.expanded.json`)} - Expanded JSON-LD`,
-      ),
-    );
+
+    if (hasSchema) {
+      console.log(
+        chalk.gray(`├── ${chalk.cyan(`${type}.schema.json`)} - JSON Schema`),
+      );
+    }
+
+    if (hasSample) {
+      console.log(
+        chalk.gray(
+          `├── ${chalk.cyan(`${type}.sample.json`)} - Original sample instance`,
+        ),
+      );
+      console.log(
+        chalk.gray(
+          `├── ${chalk.cyan(`${type}.sample.local-context.json`)} - Sample with local context`,
+        ),
+      );
+      console.log(
+        chalk.gray(
+          `└── ${chalk.cyan(`${type}.sample.expanded.json`)} - Expanded JSON-LD`,
+        ),
+      );
+    } else if (!hasSchema) {
+      // Context only
+      console.log(chalk.gray(`    (context file only)`));
+    }
   }
 }
 

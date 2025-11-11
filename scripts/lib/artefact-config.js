@@ -133,6 +133,22 @@ const UNTP_ARTEFACT_CONFIGS = {
       `https://test.uncefact.org/vocabulary/untp/dte/${version}/`,
     localContextFile: "./dte.context.jsonld",
   },
+
+  core: {
+    name: "UNTP Core",
+    baseUrl: (version) =>
+      `https://jargon.sh/user/unece/untp-core/v/${version}/artefacts`,
+    artefacts: {
+      context: {
+        urlPath: "jsonldContexts/untp-core.jsonld?class=untp-core",
+        filename: "core.context.jsonld",
+      },
+      // Note: core only has context, no schema or sample
+    },
+    contextPattern: (version) =>
+      `https://test.uncefact.org/vocabulary/untp/core/${version}/`,
+    localContextFile: "./core.context.jsonld",
+  },
 };
 
 /**
@@ -162,27 +178,40 @@ function generateDownloadConfig(type, version) {
   const config = getArtefactConfig(type);
   const baseUrl = config.baseUrl(version);
 
+  const downloads = [];
+
+  // Add context if it exists
+  if (config.artefacts.context) {
+    downloads.push({
+      name: `${config.name} context`,
+      url: `${baseUrl}/${config.artefacts.context.urlPath}`,
+      filename: config.artefacts.context.filename,
+    });
+  }
+
+  // Add schema if it exists
+  if (config.artefacts.schema) {
+    downloads.push({
+      name: `${config.name} schema`,
+      url: `${baseUrl}/${config.artefacts.schema.urlPath}`,
+      filename: config.artefacts.schema.filename,
+    });
+  }
+
+  // Add sample if it exists
+  if (config.artefacts.sample) {
+    downloads.push({
+      name: `${config.name} sample`,
+      url: `${baseUrl}/${config.artefacts.sample.urlPath}`,
+      filename: config.artefacts.sample.filename,
+    });
+  }
+
   return {
     type,
     version,
     name: config.name,
-    downloads: [
-      {
-        name: `${config.name} context`,
-        url: `${baseUrl}/${config.artefacts.context.urlPath}`,
-        filename: config.artefacts.context.filename,
-      },
-      {
-        name: `${config.name} schema`,
-        url: `${baseUrl}/${config.artefacts.schema.urlPath}`,
-        filename: config.artefacts.schema.filename,
-      },
-      {
-        name: `${config.name} sample`,
-        url: `${baseUrl}/${config.artefacts.sample.urlPath}`,
-        filename: config.artefacts.sample.filename,
-      },
-    ],
+    downloads,
     contextPattern: config.contextPattern(version),
     localContextFile: config.localContextFile,
   };
