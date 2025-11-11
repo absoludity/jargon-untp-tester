@@ -1,199 +1,19 @@
 #!/usr/bin/env node
 
-const fs = require("fs").promises;
 const path = require("path");
 const chalk = require("chalk");
-const ora = require("ora");
-const jsonld = require("jsonld");
-const Ajv = require("ajv/dist/2020");
-const addFormats = require("ajv-formats");
 
-async function downloadFile(url, outputPath) {
-  // Check if file already exists
-  try {
-    await fs.access(outputPath);
-    console.log(
-      `${chalk.gray("↓")} ${chalk.cyan(path.basename(outputPath))} ${chalk.gray("(already exists)")}`,
-    );
-    return { wasDownloaded: false, sizeKB: null }; // File exists, no download needed
-  } catch (error) {
-    // File doesn't exist, proceed with download
-  }
-
-  const spinner = ora(`Downloading ${path.basename(outputPath)}...`).start();
-
-  try {
-    const response = await fetch(url);
-
-    if (!response.ok) {
-      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-    }
-
-    const arrayBuffer = await response.arrayBuffer();
-    const buffer = Buffer.from(arrayBuffer);
-
-    await fs.writeFile(outputPath, buffer);
-
-    const sizeKB = (buffer.length / 1024).toFixed(1);
-    spinner.succeed(
-      `Downloaded ${chalk.cyan(path.basename(outputPath))} ${chalk.gray(`(${sizeKB} kB)`)}`,
-    );
-
-    return { wasDownloaded: true, sizeKB };
-  } catch (error) {
-    spinner.fail(
-      `Failed to download ${path.basename(outputPath)}: ${error.message}`,
-    );
-    throw error;
-  }
-}
-
-async function createLocalContextSample(samplePath, version) {
-  const spinner = ora("Creating sample with local context...").start();
-
-  try {
-    const content = await fs.readFile(samplePath, "utf8");
-    const jsonData = JSON.parse(content);
-
-    // Find and update the DPP context URL in the @context array
-    if (jsonData["@context"] && Array.isArray(jsonData["@context"])) {
-      const contextArray = jsonData["@context"];
-      const dppUrlPattern = `https://test.uncefact.org/vocabulary/untp/dpp/${version}/`;
-
-      for (let i = 0; i < contextArray.length; i++) {
-        if (
-          typeof contextArray[i] === "string" &&
-          contextArray[i].includes(dppUrlPattern)
-        ) {
-          contextArray[i] = "./dpp.context.jsonld";
-          break;
-        }
-      }
-    }
-
-    // Write to new file with local context suffix
-    const localContextPath = samplePath.replace(".json", ".local-context.json");
-    await fs.writeFile(
-      localContextPath,
-      JSON.stringify(jsonData, null, 2) + "\n",
-    );
-
-    spinner.succeed(
-      `Created ${chalk.cyan(path.basename(localContextPath))} with local context`,
-    );
-    return localContextPath;
-  } catch (error) {
-    spinner.fail(`Error creating local context sample: ${error.message}`);
-    return null;
-  }
-}
-
-async function runJsonLdExpand(inputPath, outputPath) {
-  const spinner = ora("Expanding JSON-LD sample...").start();
-
-  try {
-    // Read the sample file
-    const content = await fs.readFile(inputPath, "utf8");
-    const doc = JSON.parse(content);
-
-    // Custom document loader to handle local files
-    const documentLoader = async (url) => {
-      if (url.startsWith("./") || !url.includes("://")) {
-        // Handle local file paths
-        const filePath = path.resolve(path.dirname(inputPath), url);
-        try {
-          const content = await fs.readFile(filePath, "utf8");
-          return {
-            contextUrl: null,
-            document: JSON.parse(content),
-            documentUrl: url,
-          };
-        } catch (error) {
-          throw new Error(`Failed to load local context file: ${filePath}`);
-        }
-      }
-
-      // Use default loader for remote URLs
-      return jsonld.documentLoaders.node()(url);
-    };
-
-    // First try with safe mode enabled (the desired behavior)
-    const safeOptions = {
-      safe: true,
-      documentLoader: documentLoader,
-    };
-
-    try {
-      // Try expansion with safe mode
-      const expanded = await jsonld.expand(doc, safeOptions);
-
-      // Write the expanded output to file
-      await fs.writeFile(outputPath, JSON.stringify(expanded, null, 2) + "\n");
-
-      spinner.succeed(`Created ${chalk.cyan(path.basename(outputPath))}`);
-    } catch (error) {
-      // Safe mode failed - show error details and try to create expanded file anyway
-      spinner.fail(`JSON-LD validation failed: ${error.message}`);
-
-      // Show error details if available
-      if (error.details) {
-        console.log(chalk.red("\n🚨 Error Details:"));
-        console.log(chalk.gray(JSON.stringify(error.details, null, 2)));
-      }
-
-      // Try to create expanded file anyway for analysis (in non-safe mode)
-      const validationIssues = [];
-      const warningOptions = {
-        safe: false,
-        documentLoader: documentLoader,
-        eventHandler: (event) => {
-          if (event.event && event.event.level === "warning") {
-            validationIssues.push(event.event);
-          }
-        },
-      };
-
-      try {
-        const expanded = await jsonld.expand(doc, warningOptions);
-        await fs.writeFile(
-          outputPath,
-          JSON.stringify(expanded, null, 2) + "\n",
-        );
-        console.log(
-          chalk.gray(`\nCreated ${path.basename(outputPath)} for analysis`),
-        );
-
-        // Show any additional validation issues found
-        if (validationIssues.length > 0) {
-          console.log(
-            chalk.yellow(
-              `\n📋 Additional validation warnings found (${validationIssues.length}):`,
-            ),
-          );
-          validationIssues.forEach((issue, index) => {
-            console.log(
-              chalk.yellow(`\n${index + 1}. ${issue.code}: ${issue.message}`),
-            );
-            if (issue.details) {
-              console.log(chalk.gray(JSON.stringify(issue.details, null, 2)));
-            }
-          });
-        }
-      } catch (secondError) {
-        console.log(
-          chalk.red(`\nCould not create expanded file: ${secondError.message}`),
-        );
-      }
-
-      throw error;
-    }
-  } catch (error) {
-    if (!error.message.includes("JSON-LD validation failed")) {
-      spinner.fail(`JSON-LD expand failed: ${error.message}`);
-    }
-    throw error;
-  }
-}
+// Import our modules
+const { downloadFile } = require("./lib/downloader");
+const { validateJsonSchema } = require("./lib/json-schema-validator");
+const {
+  createLocalContextSample,
+  runJsonLdExpand,
+} = require("./lib/jsonld-processor");
+const {
+  ensureDirectoryExists,
+  createArtefactPaths,
+} = require("./lib/file-utils");
 
 async function downloadUntpVersion(version) {
   console.log(
@@ -201,10 +21,11 @@ async function downloadUntpVersion(version) {
   );
 
   // Create directory structure
-  const downloadsDir = "downloads";
-  const versionDir = path.join(downloadsDir, version);
+  const { versionDir, contextPath, schemaPath, samplePath, expandedPath } =
+    createArtefactPaths(version, "dpp");
+
   try {
-    await fs.mkdir(versionDir, { recursive: true });
+    await ensureDirectoryExists(versionDir);
   } catch (error) {
     console.log(
       chalk.red(`✗ Failed to create directory ${versionDir}: ${error.message}`),
@@ -219,17 +40,17 @@ async function downloadUntpVersion(version) {
     {
       name: "DigitalProductPassport context",
       url: `${dppArtefactsBaseUrl}/jsonldContexts/DigitalProductPassport.jsonld?class=DigitalProductPassport`,
-      output: path.join(versionDir, "dpp.context.jsonld"),
+      output: contextPath,
     },
     {
       name: "DigitalProductPassport schema",
       url: `${dppArtefactsBaseUrl}/jsonSchemas/DigitalProductPassport.json?class=DigitalProductPassport`,
-      output: path.join(versionDir, "dpp.schema.json"),
+      output: schemaPath,
     },
     {
       name: "DigitalProductPassport sample",
       url: `${dppArtefactsBaseUrl}/jsonSchemas/DigitalProductPassport_instance.json?class=DigitalProductPassport_instance`,
-      output: path.join(versionDir, "dpp.sample.json"),
+      output: samplePath,
     },
   ];
 
@@ -243,12 +64,7 @@ async function downloadUntpVersion(version) {
     }
   }
 
-  // Always run the expansion test (this is the actual validation)
-  const samplePath = path.join(versionDir, "dpp.sample.json");
-  const expandedPath = path.join(versionDir, "dpp.sample.expanded.json");
-
   // Validate original sample against schema
-  const schemaPath = path.join(versionDir, "dpp.schema.json");
   try {
     await validateJsonSchema(samplePath, schemaPath);
   } catch (error) {
@@ -270,6 +86,7 @@ async function downloadUntpVersion(version) {
   } catch (error) {
     process.exit(1);
   }
+
   console.log(
     chalk.green.bold(
       `\n✅ Done! Files ready in ${chalk.cyan(versionDir + "/")}`,
@@ -295,65 +112,6 @@ async function downloadUntpVersion(version) {
       `└── ${chalk.cyan("dpp.sample.expanded.json")} - Expanded JSON-LD`,
     ),
   );
-}
-
-async function validateJsonSchema(samplePath, schemaPath) {
-  const spinner = ora("Validating JSON Schema...").start();
-
-  try {
-    // Read schema and sample files
-    const schemaContent = await fs.readFile(schemaPath, "utf8");
-    const sampleContent = await fs.readFile(samplePath, "utf8");
-
-    const schema = JSON.parse(schemaContent);
-    const sample = JSON.parse(sampleContent);
-
-    // Create AJV instance with 2020-12 support (matching UNTP test suite)
-    const ajv = new Ajv({
-      allErrors: true,
-      verbose: true,
-      strict: false,
-      schemaId: "$id",
-      validateSchema: false, // Disable to prevent meta-schema validation issues
-    });
-
-    // Add format support
-    addFormats(ajv);
-
-    // Compile schema
-    const validate = ajv.compile(schema);
-
-    // Validate sample
-    const valid = validate(sample);
-
-    if (valid) {
-      spinner.succeed(`JSON Schema validation passed`);
-    } else {
-      spinner.fail(`JSON Schema validation failed`);
-      console.log(
-        chalk.red(`\n📋 Found ${validate.errors.length} schema error(s):`),
-      );
-      validate.errors.forEach((error, index) => {
-        console.log(
-          chalk.red(
-            `\n${index + 1}. ${error.instancePath || "root"}: ${error.message}`,
-          ),
-        );
-        if (error.data !== undefined) {
-          console.log(chalk.gray(`   Value: ${JSON.stringify(error.data)}`));
-        }
-        if (error.schemaPath) {
-          console.log(chalk.gray(`   Schema path: ${error.schemaPath}`));
-        }
-      });
-      throw new Error("JSON Schema validation failed");
-    }
-  } catch (error) {
-    if (!error.message.includes("JSON Schema validation failed")) {
-      spinner.fail(`JSON Schema validation error: ${error.message}`);
-    }
-    throw error;
-  }
 }
 
 function showUsage() {
