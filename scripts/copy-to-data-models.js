@@ -57,8 +57,8 @@ async function copyFile(sourcePath, destPath) {
   }
 }
 
-async function deployType(type, version, dataModelsDir) {
-  console.log(chalk.yellow(`\n--- Deploying ${type.toUpperCase()} ---`));
+async function copyType(type, version, dataModelsDir) {
+  console.log(chalk.yellow(`\n--- Copying ${type.toUpperCase()} ---`));
 
   const mapping = generateFileMappings(type);
   const sourceVersionDir = path.join("downloads", version);
@@ -102,16 +102,16 @@ async function deployType(type, version, dataModelsDir) {
 
   console.log(
     chalk.green(
-      `✓ Deployed ${copiedCount}/${totalCount} files for ${type.toUpperCase()}`,
+      `✓ Copied ${copiedCount}/${totalCount} files for ${type.toUpperCase()}`,
     ),
   );
   return copiedCount > 0;
 }
 
-async function deployToDataModels(version, types, dataModelsDir) {
+async function copyToDataModels(version, types, dataModelsDir) {
   console.log(
     chalk.blue.bold(
-      `\n🚀 Deploying UNTP files from version ${version} to data-models...\n`,
+      `\n🚀 Copying UNTP files from version ${version} to data-models...\n`,
     ),
   );
 
@@ -129,20 +129,20 @@ async function deployToDataModels(version, types, dataModelsDir) {
   let successCount = 0;
 
   for (const type of types) {
-    const success = await deployType(type, version, dataModelsDir);
+    const success = await copyType(type, version, dataModelsDir);
     if (success) successCount++;
   }
 
   console.log(
     chalk.green.bold(
-      `\n✅ Deployment complete! ${successCount}/${types.length} types deployed successfully`,
+      `\n✅ Copy complete! ${successCount}/${types.length} types copied successfully`,
     ),
   );
 
   if (successCount < types.length) {
     console.log(
       chalk.yellow(
-        "\n⚠️  Some deployments failed. Check the output above for details.",
+        "\n⚠️  Some copies failed. Check the output above for details.",
       ),
     );
   }
@@ -151,7 +151,7 @@ async function deployToDataModels(version, types, dataModelsDir) {
 function showUsage() {
   console.log(chalk.yellow("Usage:"));
   console.log(
-    "  node deploy-to-data-models.js",
+    "  node copy-to-data-models.js",
     chalk.green("<data-models-dir>"),
     chalk.green("<version>"),
     chalk.blue("[options]"),
@@ -161,7 +161,7 @@ function showUsage() {
   console.log(
     "  --types",
     chalk.green("<type1,type2>"),
-    "  UNTP types to deploy (default: all available)",
+    "  UNTP types to copy (default: all available)",
   );
   console.log("  --help                    Show this help message");
   console.log();
@@ -169,16 +169,16 @@ function showUsage() {
   console.log();
   console.log(chalk.yellow("Examples:"));
   console.log(
-    "  node deploy-to-data-models.js",
+    "  node copy-to-data-models.js",
     chalk.green("../data-models 0.6.1"),
   );
   console.log(
-    "  node deploy-to-data-models.js",
+    "  node copy-to-data-models.js",
     chalk.green("../data-models 0.6.1"),
     chalk.blue("--types dpp,dcc"),
   );
   console.log(
-    "  node deploy-to-data-models.js",
+    "  node copy-to-data-models.js",
     chalk.green("./data-models working"),
     chalk.blue("--types core"),
   );
@@ -226,7 +226,7 @@ function parseArgs() {
 // Main execution
 const { dataModelsDir, version, types } = parseArgs();
 
-deployToDataModels(version, types, dataModelsDir).catch((error) => {
+copyToDataModels(version, types, dataModelsDir).catch((error) => {
   console.log(chalk.red(`\n❌ Error: ${error.message}`));
   process.exit(1);
 });

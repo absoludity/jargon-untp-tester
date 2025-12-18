@@ -2,18 +2,56 @@
 
 A Node.js tool for downloading and validating UN Transparency Protocol (UNTP) files from the Jargon registry.
 
+Example:
+```console
+$ npm run test-version -- working --types dpp
+
+> test-version
+> node scripts/test-untp-version.js working --types dpp
+
+
+🧪 Testing UNTP files for version working (types: dpp)...
+
+
+--- Processing DPP ---
+✔ Downloaded dpp.context.jsonld (28.5 kB)
+✔ Downloaded dpp.schema.json (45.1 kB)
+✔ Downloaded dpp.vocabulary.jsonld (18.4 kB)
+✔ Downloaded dpp.sample.json (24.1 kB)
+✔ JSON Schema validation passed
+✔ Created dpp.sample.local-context.json with local context
+✔ Created dpp.sample.expanded.json
+✓ Completed processing DPP
+
+✅ Done! Files ready in downloads/working/
+
+Files created for types: dpp
+
+DPP files:
+├── dpp.context.jsonld - JSON-LD context
+├── dpp.vocabulary.jsonld - RDF vocabulary
+├── dpp.schema.json - JSON Schema
+├── dpp.sample.json - Original sample instance
+├── dpp.sample.local-context.json - Sample with local context
+└── dpp.sample.expanded.json - Expanded JSON-LD
+```
+
 ## Features
 
-### Current Functionality
+I generated this tool just in the interim while we don't have automatic json-ld and schema validation in the
+GitLab workflow (like we do in GitHub).
 
-- **Multi-type Support**: Downloads and validates multiple UNTP credential types (DPP, DCC)
-- **Smart Caching**: Only downloads files that don't already exist locally
-- **Comprehensive Validation**:
-  - JSON Schema validation using AJV with 2020-12 support
-  - JSON-LD expansion validation with detailed error reporting
-- **Local Context Testing**: Creates separate sample files with local context references for offline testing
-- **Modular Architecture**: Clean separation of concerns for easy extension
-- **Configurable**: Easy to add new UNTP credential types via configuration
+It's just a helper to pull the artefacts from Jargon and validate the data. There's an additional copy command
+that I've used to copy the validated data to the correctly locations of my local spec-untp branch, making it
+simple to create a diff for a PR.
+
+The JSON-LD validation happens by:
+- Making a copy of the Jargon generated sample data
+- updating that copy so that rather than pointing to the published context file (or the URI where the context would be published), it instead points at the locally downloaded context file
+- uses the [json-ld](https://github.com/digitalbazaar/jsonld.js) tool to expand the sample (with the `--safe` option to ensure it errors if there are any warnings)
+
+The JSON-Schema validation is done with the [ajv library](https://github.com/ajv-validator/ajv).
+
 
 ### Supported UNTP Types
 
@@ -48,10 +86,6 @@ npm install
 npm run test-version -- <version> [--types <type1,type2>]
 ```
 
-### Direct execution
-```bash
-node scripts/test-untp-version.js <version> [--types <type1,type2>]
-```
 
 ### Examples
 ```bash
@@ -89,67 +123,10 @@ For each UNTP type:
 5. **Error Reporting**: If validation fails, provides comprehensive error details
 6. **Analysis Files**: Creates expanded JSON-LD files for debugging even when validation fails
 
-## Directory Structure
-
-```
-downloads/
-└── 0.6.1/
-    ├── core.context.jsonld
-    ├── dpp.context.jsonld
-    ├── dpp.schema.json
-    ├── dpp.sample.json
-    ├── dpp.sample.local-context.json
-    ├── dpp.sample.expanded.json
-    ├── dcc.context.jsonld
-    ├── dcc.schema.json
-    ├── dcc.sample.json
-    ├── dcc.sample.local-context.json
-    ├── dcc.sample.expanded.json
-    ├── dfr.context.jsonld
-    ├── dfr.schema.json
-    ├── dfr.sample.json
-    ├── dfr.sample.local-context.json
-    ├── dfr.sample.expanded.json
-    ├── dia.context.jsonld
-    ├── dia.schema.json
-    ├── dia.sample.json
-    ├── dia.sample.local-context.json
-    ├── dia.sample.expanded.json
-    ├── dte.context.jsonld
-    ├── dte.schema.json
-    ├── dte.sample.json
-    ├── dte.sample.local-context.json
-    └── dte.sample.expanded.json
-```
-
-Note: `downloads/` is git-ignored to keep repository clean.
-
-## Error Handling
-
-- **Invalid versions**: Fails with HTTP 404 error
-- **Invalid types**: Lists available types and exits
-- **JSON Schema validation errors**: Shows detailed error paths and values
-- **JSON-LD validation errors**: Reports all validation issues with property details
-- **Protected term redefinition**: Shows specific context conflicts
-- **Network issues**: Provides clear error messages
-- **Context-only types**: Automatically detects and handles types with only context files
-
-## Architecture
-
-The tool uses a modular architecture:
-
-```
-scripts/
-├── test-untp-version.js           (Main CLI orchestration)
-└── lib/
-    ├── artefact-config.js          (UNTP type configurations)
-    ├── downloader.js              (File download functionality)
-    ├── file-utils.js              (Path and file utilities)
-    ├── json-schema-validator.js   (JSON Schema validation)
-    └── jsonld-processor.js        (JSON-LD processing and expansion)
-```
 
 ### Adding New UNTP Types
+
+In case it's useful when adding extensions to check...
 
 To add support for new UNTP credential types, add configuration to `scripts/lib/artefact-config.js`:
 
@@ -169,32 +146,14 @@ newtype: {
 }
 ```
 
-## Dependencies
-
-- `chalk` - Terminal colors and styling
-- `ora` - Progress spinners
-- `jsonld` - JSON-LD processing and validation
-- `jsonld-cli` - Command-line JSON-LD tools
-- `ajv` - JSON Schema validation with 2020-12 support
-- `ajv-formats` - Additional format validators for AJV
-
 ## Development Workflow
 
 The tool is designed for iterative development workflows:
 
 1. **Download once**: Files are cached locally and won't be re-downloaded
-2. **Modify contexts**: Edit downloaded context files locally
+2. **Modify contexts**: Edit downloaded context files locally if there are local patches to the Jargon output
 3. **Re-test**: Run the tool again to validate changes
 4. **Preserve originals**: Original samples are never modified
 5. **Local testing**: Local context samples allow offline validation
 
 The tool respects manual changes to downloaded files and only regenerates the local context and expanded JSON-LD files on each run.
-
-## Future Enhancements
-
-- **Auto-dependency Resolution**: Automatically download core when credentials reference it
-- **Cross-type Validation**: Validate relationships between credential types
-- **Batch Processing**: Process multiple versions simultaneously
-- **Integration Testing**: Validate credential chains and traceability links
-- **RDF Vocabulary Support**: Support additional RDF/OWL vocabulary artefacts
-- **Version Comparison**: Compare artefacts across versions to track changes
