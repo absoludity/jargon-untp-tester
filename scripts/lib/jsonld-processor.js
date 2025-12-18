@@ -28,6 +28,21 @@ async function createLocalContextSample(
           break;
         }
       }
+
+      // Special handling for DLP - also replace DPP context with local reference
+      if (localContextFile === "./dlp.context.jsonld") {
+        for (let i = 0; i < contextArray.length; i++) {
+          if (
+            typeof contextArray[i] === "string" &&
+            contextArray[i].includes(
+              "https://test.uncefact.org/vocabulary/untp/dpp/",
+            )
+          ) {
+            contextArray[i] = "./dpp.context.jsonld";
+            break;
+          }
+        }
+      }
     }
 
     // Write to new file with local context suffix
@@ -154,7 +169,64 @@ async function runJsonLdExpand(inputPath, outputPath) {
   }
 }
 
+async function createSimpleTestCredential(
+  type,
+  version,
+  localContextFile,
+  outputPath,
+) {
+  const spinner = ora("Creating simple test credential...").start();
+
+  try {
+    // Create a simple test credential with minimal required structure
+    const testCredential = {
+      type: ["VerifiableCredential"],
+      "@context": ["https://www.w3.org/ns/credentials/v2", localContextFile],
+      id: `https://example.com/credentials/test-${type}-${Date.now()}`,
+      issuer: {
+        type: ["CredentialIssuer"],
+        id: "did:web:example.com",
+        name: "Test Issuer",
+      },
+      validFrom: new Date().toISOString(),
+      credentialSubject: {
+        type: ["Product"],
+        id: `https://example.com/subjects/test-${type}`,
+        name: `Test product for ${type} context validation`,
+        registeredId: "TEST-123",
+        idScheme: {
+          type: ["IdentifierScheme"],
+          id: "https://example.com/schemes/test",
+          name: "Test ID Scheme",
+        },
+        description: `Simple test product to validate ${type} context`,
+        productImage: {
+          type: ["Link"],
+          id: "https://example.com/productImage.png",
+          name: "Product Image",
+          mediaType: "image/png",
+        },
+      },
+    };
+
+    // Write to file
+    await fs.writeFile(
+      outputPath,
+      JSON.stringify(testCredential, null, 2) + "\n",
+    );
+
+    spinner.succeed(
+      `Created ${chalk.cyan(path.basename(outputPath))} test credential`,
+    );
+    return outputPath;
+  } catch (error) {
+    spinner.fail(`Error creating simple test credential: ${error.message}`);
+    return null;
+  }
+}
+
 module.exports = {
   createLocalContextSample,
+  createSimpleTestCredential,
   runJsonLdExpand,
 };

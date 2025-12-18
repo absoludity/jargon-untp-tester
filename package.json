@@ -1,6 +1,7 @@
 {
   "scripts": {
-    "test-version": "node scripts/test-untp-version.js"
+    "test-version": "node scripts/test-untp-version.js",
+    "deploy": "node scripts/deploy-to-data-models.js"
   },
   "dependencies": {
     "ajv": "^8.17.1",

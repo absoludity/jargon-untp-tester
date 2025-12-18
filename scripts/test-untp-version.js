@@ -8,6 +8,7 @@ const { downloadFile } = require("./lib/downloader");
 const { validateJsonSchema } = require("./lib/json-schema-validator");
 const {
   createLocalContextSample,
+  createSimpleTestCredential,
   runJsonLdExpand,
 } = require("./lib/jsonld-processor");
 const {
@@ -67,7 +68,7 @@ async function processUntpType(version, type) {
     }
   }
 
-  // Only do validation and expansion if this type has schema and sample files
+  // Check what files are available for this type
   const hasSchema = config.downloads.some((d) =>
     d.filename.includes(".schema.json"),
   );
@@ -76,7 +77,7 @@ async function processUntpType(version, type) {
   );
 
   if (hasSchema && hasSample) {
-    // Validate original sample against schema
+    // Full validation path: validate original sample against schema
     try {
       await validateJsonSchema(samplePath, schemaPath);
     } catch (error) {
@@ -100,11 +101,34 @@ async function processUntpType(version, type) {
       process.exit(1);
     }
   } else {
+    // Context-only path: create simple test credential and run JSON-LD expansion
     console.log(
       chalk.gray(
-        `  Note: ${config.name} only has context file, skipping validation`,
+        `  Note: ${config.name} only has context file, creating test credential for JSON-LD validation`,
       ),
     );
+
+    // Create a simple test credential for this context
+    const testCredentialPath = path.join(
+      versionDir,
+      `${type}.test-credential.json`,
+    );
+    const testCredentialResult = await createSimpleTestCredential(
+      type,
+      version,
+      config.localContextFile,
+      testCredentialPath,
+    );
+    if (!testCredentialResult) {
+      process.exit(1);
+    }
+
+    // Expand the test credential JSON-LD (this validates the context works)
+    try {
+      await runJsonLdExpand(testCredentialResult, expandedPath);
+    } catch (error) {
+      process.exit(1);
+    }
   }
 
   // Show completion for this type
@@ -164,8 +188,17 @@ function showSummary(version, types) {
         ),
       );
     } else if (!hasSchema) {
-      // Context and vocabulary only
-      console.log(chalk.gray(`    (context and vocabulary files only)`));
+      // Context and vocabulary only - show test credential files
+      console.log(
+        chalk.gray(
+          `├── ${chalk.cyan(`${type}.test-credential.json`)} - Generated test credential`,
+        ),
+      );
+      console.log(
+        chalk.gray(
+          `└── ${chalk.cyan(`${type}.sample.expanded.json`)} - Expanded JSON-LD`,
+        ),
+      );
     }
   }
 }

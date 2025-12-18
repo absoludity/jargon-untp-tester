@@ -173,6 +173,36 @@ const UNTP_ARTEFACT_CONFIGS = {
       `https://test.uncefact.org/vocabulary/untp/core/${version}/`,
     localContextFile: "./core.context.jsonld",
   },
+
+  dlp: {
+    name: "Digital Livestock Product",
+    baseUrl: (version) =>
+      `https://jargon.sh/user/aatp/DigitalLivestockPassport/v/${version}/artefacts`,
+    artefacts: {
+      context: {
+        urlPath:
+          "jsonldContexts/DigitalLivestockPassport.jsonld?class=DigitalLivestockPassport",
+        filename: "dlp.context.jsonld",
+      },
+      vocabulary: {
+        urlPath: "jsonld/render.jsonld",
+        filename: "dlp.vocabulary.jsonld",
+      },
+      schema: {
+        urlPath:
+          "jsonSchemas/DigitalLivestockPassport.json?class=DigitalLivestockPassport",
+        filename: "dlp.schema.json",
+      },
+      sample: {
+        urlPath:
+          "jsonSchemas/DigitalLivestockPassport_instance.json?class=DigitalLivestockPassport_instance",
+        filename: "dlp.sample.json",
+      },
+    },
+    contextPattern: (version) =>
+      `https://aatp.foodagility.com/context/aatp-dlp-context-${version}.jsonld`,
+    localContextFile: "./dlp.context.jsonld",
+  },
 };
 
 /**
