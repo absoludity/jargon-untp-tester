@@ -1,7 +1,7 @@
 {
   "scripts": {
     "test-version": "node scripts/test-untp-version.js",
-    "deploy": "node scripts/copy-to-data-models.js"
+    "copy": "node scripts/copy-to-data-models.js"
   },
   "dependencies": {
     "ajv": "^8.17.1",
