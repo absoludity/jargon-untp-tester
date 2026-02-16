@@ -200,12 +200,6 @@ async function createSimpleTestCredential(
           name: "Test ID Scheme",
         },
         description: `Simple test product to validate ${type} context`,
-        productImage: {
-          type: ["Link"],
-          id: "https://example.com/productImage.png",
-          name: "Product Image",
-          mediaType: "image/png",
-        },
       },
     };
 
